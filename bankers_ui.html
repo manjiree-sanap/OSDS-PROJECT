@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banker's Algorithm Pro Visualizer</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
+
+        :root {
+            --bg-color: #1a1b26;
+            --frame-color: #24283b;
+            --text-color: #a9b1d6;
+            --header-color: #ffffff;
+            --accent-pink: #ff79c6;
+            --accent-cyan: #8abeb7;
+            --accent-green: #9ece6a;
+            --accent-yellow: #e0af68;
+            --accent-red: #f7768e;
+            --font-family: 'Poppins', sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1, h2, h3 {
+            color: var(--header-color);
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1400px;
+            background-color: var(--frame-color);
+            padding: 20px 30px;
+            border-radius: 12px;
+            border: 1px solid #414868;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+            margin-bottom: 20px;
+        }
+
+        .hidden { display: none !important; }
+
+        .controls {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        input {
+            font-family: var(--font-family);
+            font-size: 1em;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #414868;
+            background-color: var(--bg-color);
+            color: var(--header-color);
+            width: 100px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: var(--accent-pink);
+            box-shadow: 0 0 0 3px #ff79c633;
+        }
+
+        button {
+            font-family: var(--font-family);
+            font-size: 1em;
+            font-weight: 600;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            background-image: linear-gradient(45deg, var(--accent-pink), var(--accent-cyan));
+            color: var(--bg-color);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+        }
+        button:disabled {
+            background-image: none;
+            background-color: #5c6370;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        #dashboard-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .matrix-display {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #414868;
+            transition: all 0.5s ease;
+        }
+        th {
+            background-color: var(--accent-cyan);
+            color: var(--bg-color);
+            font-weight: 600;
+        }
+        tr[data-pid] {
+            transition: background-color 0.5s, color 0.5s;
+        }
+        .row-checking { background-color: var(--accent-yellow); color: var(--bg-color); }
+        .row-success { background-color: var(--accent-green); color: var(--bg-color); }
+        
+        @keyframes flash-success { 0%, 100% { background-color: transparent; } 50% { background-color: #9ece6a55; } }
+        @keyframes flash-error { 0%, 100% { background-color: transparent; } 50% { background-color: #f7768e55; } }
+        .flash-success { animation: flash-success 1.2s ease; }
+        .flash-error { animation: flash-error 1.2s ease; }
+
+        #log-output {
+            background-color: #16161e;
+            border-radius: 8px;
+            padding: 15px;
+            height: 250px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            border: 1px solid #414868;
+        }
+
+        .log-success { color: var(--accent-green); }
+        .log-wait { color: var(--accent-yellow); }
+        .log-error { color: var(--accent-red); }
+    </style>
+</head>
+<body>
+
+    <h1>Banker's Algorithm Pro Visualizer</h1>
+
+    <div id="setup-section" class="container">
+        <h2>System Configuration</h2>
+        <div class="controls">
+            <input type="number" id="num-processes" min="1" value="5" title="Number of Processes">
+            <input type="number" id="num-resources" min="1" value="3" title="Number of Resources">
+            <button id="generate-tables-btn">Generate</button>
+            <button id="load-sample-btn">Load Sample</button>
+        </div>
+        <div id="input-grids" style="display: flex; gap: 20px; justify-content: center;"></div>
+        <div class="controls" style="margin-top: 20px;">
+            <button id="start-sim-btn" class="hidden">🚀 Start Simulation</button>
+        </div>
+    </div>
+
+    <div id="dashboard-section" class="container hidden">
+        <div id="dashboard-grid">
+            <div id="matrices-container">
+                <h2>System State</h2>
+                <div class="matrix-display">
+                    <div id="allocation-matrix"></div>
+                    <div id="max-matrix"></div>
+                    <div id="need-matrix"></div>
+                    <div id="available-vector"></div>
+                </div>
+                <div id="work-vector-display" class="hidden" style="margin-top:20px;">
+                    <h3>Visualization Work Vector</h3>
+                    <table id="work-vector-table"></table>
+                </div>
+            </div>
+            
+            <div id="controls-container">
+                <h2>Actions</h2>
+                <div class="controls" style="flex-direction: column; gap: 15px;">
+                    <input type="number" id="process-id" min="0" placeholder="Process ID">
+                    <input type="text" id="request-vector" placeholder="e.g., 1,0,2">
+                    <button id="submit-request-btn">▶️ Submit Request</button>
+                    <button id="visualize-btn">🔍 Visualize Safety</button>
+                    <button id="reset-button">🔄 Reset</button>
+                </div>
+            </div>
+
+            <div id="log-panel" style="grid-column: 1 / -1;">
+                <h2>Live Log</h2>
+                <div id="log-output"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- BANKER'S ALGORITHM LOGIC (JavaScript implementation) ---
+        class BankersAlgorithm {
+            constructor(available, maxDemand, allocation) { this.numProcesses = maxDemand.length; this.numResources = available.length; this.available = JSON.parse(JSON.stringify(available)); this.maxDemand = JSON.parse(JSON.stringify(maxDemand)); this.allocation = JSON.parse(JSON.stringify(allocation)); this.need = Array(this.numProcesses).fill(0).map((_, i) => Array(this.numResources).fill(0).map((_, j) => this.maxDemand[i][j] - this.allocation[i][j])); }
+            isSafeState() { let work = [...this.available]; let finish = Array(this.numProcesses).fill(false); let safeSequence = []; let changedInLoop = true; while (changedInLoop) { changedInLoop = false; for (let i = 0; i < this.numProcesses; i++) { if (!finish[i] && this.need[i].every((n, j) => n <= work[j])) { this.allocation[i].forEach((a, j) => work[j] += a); finish[i] = true; safeSequence.push(i); changedInLoop = true; } } } return { isSafe: safeSequence.length === this.numProcesses, sequence: safeSequence }; }
+            requestResources(processId, request) { const originalState = { available: [...this.available], allocation: JSON.parse(JSON.stringify(this.allocation)), need: JSON.parse(JSON.stringify(this.need)) }; for (let j = 0; j < this.numResources; j++) { this.available[j] -= request[j]; this.allocation[processId][j] += request[j]; this.need[processId][j] -= request[j]; } const { isSafe, sequence } = this.isSafeState(); if (!isSafe) { this.available = originalState.available; this.allocation = originalState.allocation; this.need = originalState.need; } return { isSafe, sequence }; }
+            _formatSequence(sequence) { return sequence.map(p => `P${p}`).join(" → "); }
+        }
+
+        // --- UI & DOM MANIPULATION LOGIC ---
+        const setupSection = document.getElementById('setup-section');
+        const dashboardSection = document.getElementById('dashboard-section');
+        const logOutput = document.getElementById('log-output');
+        const allButtons = document.querySelectorAll('button');
+        const dashboardButtons = document.querySelectorAll('#dashboard-section button');
+        const workVectorDisplay = document.getElementById('work-vector-display');
+        let banker = null;
+        let isAnimating = false;
+        const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+        // --- Event Listeners ---
+        document.getElementById('generate-tables-btn').addEventListener('click', generateInputTables);
+        document.getElementById('load-sample-btn').addEventListener('click', loadSampleData);
+        document.getElementById('start-sim-btn').addEventListener('click', startSimulation);
+        document.getElementById('submit-request-btn').addEventListener('click', handleSubmitRequest);
+        document.getElementById('visualize-btn').addEventListener('click', () => visualizeSafetyCheck(true));
+        document.getElementById('reset-button').addEventListener('click', resetSimulation);
+        
+        // --- Core Functions ---
+        async function handleSubmitRequest() {
+            if (isAnimating) return;
+            try {
+                const pid = parseInt(document.getElementById('process-id').value);
+                const request = document.getElementById('request-vector').value.split(',').map(n => parseInt(n.trim()));
+
+                // --- 1. Validation ---
+                if (isNaN(pid) || pid < 0 || pid >= banker.numProcesses) throw new Error("Invalid Process ID.");
+                if (request.some(isNaN) || request.length !== banker.numResources) throw new Error("Invalid Request Vector.");
+                if (request.some((r, j) => r > banker.need[pid][j])) { logMessage(`Error: P${pid} exceeded its max claim.`, "error"); return; }
+                if (request.some((r, j) => r > banker.available[j])) { logMessage(`Request by P${pid} denied. Resources not available.`, "wait"); return; }
+
+                setAnimatingState(true);
+                logMessage(`--- P${pid} requesting [${request.join(',')}] ---`);
+                highlightRow(pid, 'row-checking');
+                await sleep(1000);
+
+                // --- 2. Pretend Allocation (Animation) ---
+                logMessage("Temporarily allocating resources...");
+                const originalState = { available: [...banker.available], allocation: JSON.parse(JSON.stringify(banker.allocation)), need: JSON.parse(JSON.stringify(banker.need))};
+                
+                flashCells(pid, request);
+                await sleep(600);
+                
+                request.forEach((r, j) => {
+                    banker.available[j] -= r;
+                    banker.allocation[pid][j] += r;
+                    banker.need[pid][j] -= r;
+                });
+                updateDisplay();
+                await sleep(1000);
+
+                // --- 3. Run Safety Check Visualization ---
+                logMessage("Checking if the new state is safe...");
+                const isSafe = await visualizeSafetyCheck(false);
+                
+                // --- 4. Commit or Rollback (Animation) ---
+                if (isSafe) {
+                    logMessage(`✅ Request by P${pid} is **GRANTED**. System remains in a safe state.`, "success");
+                    flashElement(dashboardSection, 'flash-success');
+                } else {
+                    logMessage(`❌ Request by P${pid} is **DENIED**. Granting would lead to an unsafe state.`, "error");
+                    await sleep(1000);
+                    logMessage("Rolling back transaction...");
+                    flashCells(pid, request, true); // Rollback flash
+                    await sleep(600);
+                    banker.available = originalState.available;
+                    banker.allocation = originalState.allocation;
+                    banker.need = originalState.need;
+                    updateDisplay();
+                    flashElement(dashboardSection, 'flash-error');
+                }
+                clearHighlights();
+                setAnimatingState(false);
+            } catch (error) {
+                 logMessage(`Invalid request: ${error.message}`, "error");
+                 setAnimatingState(false);
+            }
+        }
+        
+        function visualizeSafetyCheck(isStandalone = true) {
+            return new Promise(async (resolve) => {
+                if (isAnimating || !banker) return resolve(false);
+
+                setAnimatingState(true);
+                if(isStandalone) {
+                    logOutput.innerHTML = '';
+                    logMessage("--- Starting Safety Algorithm Visualization ---");
+                }
+                clearHighlights();
+                workVectorDisplay.classList.remove('hidden');
+
+                const work = [...banker.available];
+                const finish = Array(banker.numProcesses).fill(false);
+                const safeSequence = [];
+                updateWorkVectorTable(work);
+                
+                let changedInPass = true;
+                while (changedInPass) {
+                    changedInPass = false;
+                    for (let i = 0; i < banker.numProcesses; i++) {
+                        if (finish[i]) continue;
+
+                        highlightRow(i, 'row-checking');
+                        logMessage(`Checking P${i}: Need=[${banker.need[i]}] <= Work=[${work}]?`);
+                        await sleep(1200);
+
+                        if (banker.need[i].every((n, j) => n <= work[j])) {
+                            logMessage(`--> YES. P${i} can execute. Releasing resources.`, "success");
+                            banker.allocation[i].forEach((a, j) => work[j] += a);
+                            finish[i] = true;
+                            safeSequence.push(i);
+                            changedInPass = true;
+                            highlightRow(i, 'row-success');
+                            updateWorkVectorTable(work);
+                            await sleep(1200);
+                        } else {
+                            logMessage(`--> NO. P${i} must wait.`);
+                            clearHighlights(i);
+                            await sleep(800);
+                        }
+                    }
+                }
+                
+                const success = safeSequence.length === banker.numProcesses;
+                if (isStandalone) {
+                    if(success) logMessage(`✅ SUCCESS! Safe sequence: <strong>${banker._formatSequence(safeSequence)}</strong>`, "success");
+                    else { logMessage(`❌ UNSAFE STATE! No full safe sequence found.`, "error"); highlightRemaining(finish); }
+                }
+
+                workVectorDisplay.classList.add('hidden');
+                if(!isStandalone || !success) await sleep(1500); // Keep highlights for a moment
+                clearHighlights();
+                setAnimatingState(false);
+                resolve(success);
+            });
+        }
+        
+        // --- UI & Helper Functions ---
+        function setAnimatingState(isBusy) { isAnimating = isBusy; allButtons.forEach(btn => btn.disabled = isBusy); }
+        function logMessage(message, type = 'info') { const e = document.createElement('div'); e.innerHTML = `> ${message}`; e.className = `log-${type}`; logOutput.appendChild(e); logOutput.scrollTop = logOutput.scrollHeight; }
+        function createTableHTML(title, data, isVector = false) { let h = `<h3>${title}</h3><table id="tbl-${title.toLowerCase().replace(' ', '')}"><tr><th>${isVector?'Sys':'PID'}</th>${Array.from({length:data[0].length},(_,j)=>`<th>R${j}</th>`).join('')}</tr>`; data.forEach((row,i) => { h += `<tr data-pid="${i}"><td>${isVector?'Total':`P${i}`}</td>${row.map(c=>`<td>${c}</td>`).join('')}</tr>`; }); return h + '</table>'; }
+        function updateDisplay() { if (banker) { document.getElementById('allocation-matrix').innerHTML = createTableHTML('Allocation', banker.allocation); document.getElementById('max-matrix').innerHTML = createTableHTML('Max', banker.maxDemand); document.getElementById('need-matrix').innerHTML = createTableHTML('Need', banker.need); document.getElementById('available-vector').innerHTML = createTableHTML('Available', [banker.available], true); } }
+        function highlightRow(pid, className) { document.querySelectorAll(`tr[data-pid="${pid}"]`).forEach(r => r.className = className); }
+        function clearHighlights(pid) { const r = pid === undefined ? document.querySelectorAll('tr[data-pid]') : document.querySelectorAll(`tr[data-pid="${pid}"]`); r.forEach(row => row.className = ''); }
+        function highlightRemaining(finish) { finish.forEach((f, pid) => { if (!f) highlightRow(pid, 'row-checking'); }); }
+        function updateWorkVectorTable(work) { document.getElementById('work-vector-table').innerHTML = `<tr>${work.map((v,i)=>`<th>R${i}</th>`).join('')}</tr><tr>${work.map(v=>`<td>${v}</td>`).join('')}</tr>`; }
+        function flashCells(pid, request, isRollback = false) { const availCells = document.querySelectorAll('#tbl-available td'); const allocRow = document.querySelector(`#tbl-allocation tr[data-pid="${pid}"]`); if (allocRow) allocRow.classList.add(isRollback ? 'flash-error' : 'flash-success'); request.forEach((r, j) => { if (r > 0 && availCells[j]) availCells[j].classList.add(isRollback ? 'flash-success' : 'flash-error'); }); setTimeout(() => { allocRow.classList.remove('flash-success', 'flash-error'); availCells.forEach(c => c.classList.remove('flash-success', 'flash-error')); }, 1200); }
+        function flashElement(element, className) { element.classList.add(className); setTimeout(() => element.classList.remove(className), 1200); }
+        function startSimulation() { try { const p = parseInt(document.getElementById('num-processes').value); const r = parseInt(document.getElementById('num-resources').value); banker = new BankersAlgorithm(readGrid('grid-available',1,r)[0], readGrid('grid-max-demand',p,r), readGrid('grid-allocation',p,r)); setupSection.classList.add('hidden'); dashboardSection.classList.remove('hidden'); logOutput.innerHTML=''; logMessage("Simulation started.", "success"); const {isSafe,sequence} = banker.isSafeState(); logMessage(`Initial state is <strong>${isSafe?'SAFE':'UNSAFE'}</strong>.`, isSafe?"success":"error"); if(isSafe) logMessage(`Safe sequence: ${banker._formatSequence(sequence)}`, "success"); updateDisplay(); } catch (e) { alert(`Error: ${e.message}.`); } }
+        function resetSimulation() { if (isAnimating) return; banker = null; dashboardSection.classList.add('hidden'); setupSection.classList.remove('hidden'); document.getElementById('input-grids').innerHTML = ''; document.getElementById('start-sim-btn').classList.add('hidden'); }
+        function generateInputTables() { const p = parseInt(document.getElementById('num-processes').value); const r = parseInt(document.getElementById('num-resources').value); const c = document.getElementById('input-grids'); c.innerHTML = ''; if (p > 0 && r > 0) { c.appendChild(createGrid('Available', 1, r)); c.appendChild(createGrid('Max Demand', p, r)); c.appendChild(createGrid('Allocation', p, r)); document.getElementById('start-sim-btn').classList.remove('hidden'); } else { alert("Please enter positive numbers."); } }
+        function createGrid(t, r, c) { const d=document.createElement('div'); d.innerHTML=`<h3>${t}</h3>`; const g=document.createElement('div'); g.id=`grid-${t.toLowerCase().replace(' ','-')}`; g.style.gridTemplateColumns=`repeat(${c},auto)`; for(let i=0;i<r;i++) for(let j=0;j<c;j++) {const inp=document.createElement('input');inp.type='number';inp.min=0;g.appendChild(inp);} d.appendChild(g); return d;}
+        function loadSampleData() { document.getElementById('num-processes').value=5; document.getElementById('num-resources').value=3; generateInputTables(); const s={available:[3,3,2],max:[[7,5,3],[3,2,2],[9,0,2],[2,2,2],[4,3,3]],allocation:[[0,1,0],[2,0,0],[3,0,2],[2,1,1],[0,0,2]]}; fillGrid('grid-available',[s.available]); fillGrid('grid-max-demand',s.max); fillGrid('grid-allocation',s.allocation); }
+        function fillGrid(id, data) { const i=document.querySelectorAll(`#${id} input`); let k=0; data.forEach(r=>r.forEach(c=>i[k++].value=c)); }
+        function readGrid(id, r, c) { const d=[]; const i=document.querySelectorAll(`#${id} input`); let k=0; for(let j=0;j<r;j++) { const row=[]; for(let l=0;l<c;l++) {const v=parseInt(i[k++].value); if(isNaN(v))throw new Error(`Invalid input in ${id}`); row.push(v);} d.push(row); } return d; }
+    </script>
+</body>
+</html>
